@@ -1,0 +1,16 @@
+{
+  "description": "Config for TencentVideoButton Test",
+  "environment": [
+    {
+      "type": "device",
+      "label": "phone"
+    }
+  ],
+  "driver": {
+    "type": "DeviceTest",
+    "py_file": [
+      "TencentVideoButton.py"
+    ]
+  }
+}
+
