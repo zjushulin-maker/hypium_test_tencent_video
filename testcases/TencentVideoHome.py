@@ -22,11 +22,11 @@ class TencentVideoHome(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
         # 可自定义滑动次数，默认20次
-        self.swipe_count = 20
+        self.swipe_count = 50
         # memdump相关操作开关，默认关闭
-        self.enable_memdump = False
+        self.enable_memdump = True
         # profiler相关操作开关，默认开启
-        self.enable_profiler = True
+        self.enable_profiler = False
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 
@@ -52,7 +52,7 @@ class TencentVideoHome(TencentVideoBase):
             remaining = self.swipe_count - i - 1  # 剩余次数
             
             # 当开关开启且剩余5次时，触发gc dump
-            if self.enable_memdump and remaining == 5:
+            if self.enable_memdump and remaining == 10:
                 Step('5.执行hdc shell命令触发gc dump')
                 # 执行hdc shell命令写入control.log
                 command1 = 'hdc shell \'echo "1" > /data/app/el2/100/base/com.tencent.videohm/files/control.log\''
@@ -61,7 +61,7 @@ class TencentVideoHome(TencentVideoBase):
             
             # 执行滑动
             self.driver.slide((start_x, start_y), (end_x, end_y), slide_time=0.3)
-            time.sleep(1)
+            time.sleep(0.3)
 
     def teardown(self):
         """调用父类的teardown方法"""

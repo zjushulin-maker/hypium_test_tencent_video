@@ -22,9 +22,10 @@ class TencentVideoButton(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
         # 可自定义切换次数，默认2次（来回算一次）
-        self.switch_count = 2
+        self.switch_count = 3
         # button列表
-        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "NBA", "纪录片", "体育", "播客"]
+        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "NBA", "纪录片", "体育"]
+        # self.button_list = ["首页", "NBA","电视剧", "动漫", "电影", "综艺","吉家宴",  "纪录片", "体育", "播客"]
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 
@@ -78,10 +79,10 @@ class TencentVideoButton(TencentVideoBase):
             # 顺序点击button
             for button_name in self.button_list:
                 if self._click_button(button_name):
-                    time.sleep(1.3)
+                    time.sleep(0.8)
                 else:
                     # 如果找不到button，等待一下继续
-                    time.sleep(1)
+                    time.sleep(0.5)
             
             # 逆序点击button
             for button_name in reversed(self.button_list):

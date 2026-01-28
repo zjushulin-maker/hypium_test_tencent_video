@@ -22,11 +22,11 @@ class TencentVideoShort(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
         # 可自定义滑动次数，默认20次
-        self.swipe_count = 20
+        self.swipe_count = 30
         # memdump相关操作开关，默认关闭
-        self.enable_memdump = False
+        self.enable_memdump = True
         # profiler相关操作开关，默认开启
-        self.enable_profiler = True
+        self.enable_profiler = False
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 

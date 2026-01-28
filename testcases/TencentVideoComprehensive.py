@@ -22,7 +22,7 @@ class TencentVideoComprehensive(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
         # button列表
-        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "NBA", "纪录片", "体育", "播客"]
+        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "NBA", "纪录片", "体育"]
         # 视频滑动次数（20秒，每秒一次）
         self.video_swipe_count = 20
         # 评论区滑动次数（50秒，每秒一次）
