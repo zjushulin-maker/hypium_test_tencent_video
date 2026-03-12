@@ -30,7 +30,7 @@ class TencentVideoBase(TestCase):
         self.driver = UiDriver(self.device1)
         self.package_name = "com.tencent.videohm"
         # memdump相关操作开关，默认开启
-        self.enable_memdump = True
+        self.enable_memdump = False
         # profiler相关操作开关，默认开启
         self.enable_profiler = False
         # pmap采样间隔时间（秒），默认1秒
