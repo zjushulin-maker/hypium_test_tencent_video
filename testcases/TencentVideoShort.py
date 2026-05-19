@@ -21,8 +21,8 @@ from TencentVideoBase import TencentVideoBase
 class TencentVideoShort(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
-        # 可自定义滑动次数，默认20次
-        self.swipe_count = 30
+        # 可自定义滑动次数，基准30次，压测时乘以 stress_multiplier
+        self.swipe_count = 30 * self.stress_multiplier
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 

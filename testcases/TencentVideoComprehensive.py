@@ -22,11 +22,11 @@ class TencentVideoComprehensive(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
         # button列表
-        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "碰见你","NBA", "纪录片", "体育"]
-        # 视频滑动次数（20秒，每秒一次）
-        self.video_swipe_count = 20
-        # 评论区滑动次数（50秒，每秒一次）
-        self.comment_swipe_count = 50
+        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "少儿","NBA", "纪录片", "体育", "播客", "游戏", "短视频", "宠物tv"]
+        # 视频滑动次数，基准20次，压测时乘以 stress_multiplier
+        self.video_swipe_count = 20 * self.stress_multiplier
+        # 评论区滑动次数，基准50次，压测时乘以 stress_multiplier
+        self.comment_swipe_count = 50 * self.stress_multiplier
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 
@@ -68,7 +68,7 @@ class TencentVideoComprehensive(TencentVideoBase):
         # 顺序点击button
         for button_name in self.button_list:
             if self._click_button(button_name):
-                time.sleep(1.3)
+                time.sleep(0.8)
             else:
                 # 如果找不到button，等待一下继续
                 time.sleep(0.2)
@@ -76,14 +76,14 @@ class TencentVideoComprehensive(TencentVideoBase):
         # 逆序点击button，最终回到首页
         for button_name in reversed(self.button_list):
             if self._click_button(button_name):
-                time.sleep(1.3)
+                time.sleep(0.8)
             else:
                 # 如果找不到button，等待一下继续
                 time.sleep(0.2)
 
         Step('5.选择首页第一个视频')
         # 点击第一个视频的中心位置(630, 721)
-        self.driver.touch((334, 1258))
+        self.driver.touch((334, 1850))
         time.sleep(1)  # 等待视频加载
 
         Step('6.视频播放界面向上滑动20秒')

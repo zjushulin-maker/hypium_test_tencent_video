@@ -21,8 +21,8 @@ from TencentVideoBase import TencentVideoBase
 class TencentVideoComment(TencentVideoBase):
     def __init__(self, controllers):
         super().__init__(controllers)
-        # 可自定义滑动次数，默认60次
-        self.swipe_count = 60
+        # 可自定义滑动次数，基准60次，压测时乘以 stress_multiplier
+        self.swipe_count = 60 * self.stress_multiplier
         # pmap采样间隔时间（秒），默认1秒
         self.hidumper_interval = 1
 
@@ -36,7 +36,7 @@ class TencentVideoComment(TencentVideoBase):
 
         Step('4.选择首页第一个视频')
         # 点击第一个视频的中心位置(630, 721)
-        self.driver.touch((334, 1258))
+        self.driver.touch((334, 1850))
         time.sleep(1)  # 等待视频加载
 
         Step('5.切换到评论')

@@ -20,15 +20,21 @@ from pathlib import Path
 from devicetest.core.test_case import TestCase, Step
 from hypium import *
 
+# 压测倍率：所有子类的操作次数将乘以此值
+# 1 = 正常模式，50 = 压测模式（操作次数变为原来的50倍）
+STRESS_MULTIPLIER = 100
+
 
 class TencentVideoBase(TestCase):
     """腾讯视频测试用例基类，包含公共功能"""
-    
+
     def __init__(self, controllers):
         self.TAG = self.__class__.__name__
         TestCase.__init__(self, self.TAG, controllers)
         self.driver = UiDriver(self.device1)
         self.package_name = "com.tencent.videohm"
+        # 压测倍率，子类操作次数初始化时乘以此值
+        self.stress_multiplier = STRESS_MULTIPLIER
         # memdump相关操作开关，默认开启
         self.enable_memdump = False
         # profiler相关操作开关，默认开启
@@ -226,9 +232,9 @@ CONFIG"'''
         Step('2.强制退出腾讯视频应用（避免后台进程残留）')
         self._force_stop_app()
         
-        # 启动pmap监控，确保在应用启动时就开始采集
-        Step('2.1.启动pmap内存监控')
-        self._start_hidumper_monitor()
+        # # 启动pmap监控，确保在应用启动时就开始采集
+        # Step('2.1.启动pmap内存监控')
+        # self._start_hidumper_monitor()
         
         Step('2.2.启动腾讯视频应用')
         self.driver.start_app(package_name=self.package_name)
