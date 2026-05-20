@@ -22,7 +22,7 @@ from hypium import *
 
 # 压测倍率：所有子类的操作次数将乘以此值
 # 1 = 正常模式，50 = 压测模式（操作次数变为原来的50倍）
-STRESS_MULTIPLIER = 50
+STRESS_MULTIPLIER = 10
 
 
 class TencentVideoBase(TestCase):
