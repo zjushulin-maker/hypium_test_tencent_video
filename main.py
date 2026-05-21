@@ -55,6 +55,16 @@ def parse_args():
         metavar="PATH",
         help="faultlog 本地保存目录（默认：./faultlogs）",
     )
+    parser.add_argument(
+        "-c", "--cases",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="CASE",
+        help="指定要运行的用例名，多个用空格分隔（默认：运行全部用例）\n"
+             "示例: -c TencentVideoButton\n"
+             "示例: -c TencentVideoButton TencentVideoHome",
+    )
     return parser.parse_args()
 
 
@@ -213,7 +223,16 @@ if __name__ == "__main__":
     report_path   = args.report_path
     fault_save_dir = args.fault_path
 
-    cases = get_all_testcases()
+    all_cases = get_all_testcases()
+    if args.cases:
+        unknown = [c for c in args.cases if c not in all_cases]
+        if unknown:
+            print(f"{_R}未知用例：{unknown}")
+            print(f"可用用例：{all_cases}{_X}")
+            raise SystemExit(1)
+        cases = args.cases
+    else:
+        cases = all_cases
 
     print(f"{_C}发现用例（共 {len(cases)} 个）：{cases}")
     print(f"压测轮数：{'∞' if repeat == 0 else repeat}")
