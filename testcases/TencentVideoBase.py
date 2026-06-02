@@ -22,12 +22,11 @@ from hypium import *
 
 # 压测倍率：所有子类的操作次数将乘以此值
 # 1 = 正常模式，50 = 压测模式（操作次数变为原来的50倍）
-STRESS_MULTIPLIER = 10
+STRESS_MULTIPLIER = 1
 
 
 class TencentVideoBase(TestCase):
     """腾讯视频测试用例基类，包含公共功能"""
-
     def __init__(self, controllers):
         self.TAG = self.__class__.__name__
         TestCase.__init__(self, self.TAG, controllers)
@@ -35,8 +34,10 @@ class TencentVideoBase(TestCase):
         self.package_name = "com.tencent.videohm"
         # 压测倍率，子类操作次数初始化时乘以此值
         self.stress_multiplier = STRESS_MULTIPLIER
+        # 首页button列表，子类可按需覆盖
+        self.button_list = ["首页", "电视剧", "动漫", "电影", "综艺", "NBA", "纪录片", "体育", "播客", "游戏", "短视频", "宠物tv"]
         # memdump相关操作开关，默认开启
-        self.enable_memdump = False
+        self.enable_memdump = True
         # profiler相关操作开关，默认开启
         self.enable_profiler = False
         # pmap采样间隔时间（秒），默认1秒
@@ -141,7 +142,7 @@ CONFIG"'''
                 # 在设备端完成所有处理，返回两个数字（虚拟内存总和 物理内存总和）
                 # 使用shell脚本在设备端完成提取和求和，避免Python端处理大量数据
                 # 使用临时文件避免子shell变量丢失问题
-                command_pmap = f"""hdc shell 'pid=$(pidof {self.package_name}); if [ -n "$pid" ]; then tmp=$(mktemp 2>/dev/null || echo /data/local/tmp/pmap_tmp_$$); pmap -x $pid 2>/dev/null | grep "anon:Kotlin" | sed "s/^[^ ]* *\\([0-9]*\\) *\\([0-9]*\\).*/\\1 \\2/" > $tmp; virtual=0; physical=0; while read kbytes rss rest; do [ -n "$kbytes" ] && [ -n "$rss" ] && virtual=$((virtual + kbytes)) && physical=$((physical + rss)); done < $tmp; rm -f $tmp 2>/dev/null; echo "$virtual $physical"; else echo "0 0"; fi'"""
+                command_pmap = f"""hdc shell 'pid=$(pidof {self.package_name}); if [ -n "$pid" ]; then tmp=$(mktemp 2>/dev/null || echo /data/local/tmp/pmap_tmp_$$); pmap -x $pid 2>/dev/null | grep "CMCGC" | sed "s/^[^ ]* *\\([0-9]*\\) *\\([0-9]*\\).*/\\1 \\2/" > $tmp; virtual=0; physical=0; while read kbytes rss rest; do [ -n "$kbytes" ] && [ -n "$rss" ] && virtual=$((virtual + kbytes)) && physical=$((physical + rss)); done < $tmp; rm -f $tmp 2>/dev/null; echo "$virtual $physical"; else echo "0 0"; fi'"""
                 
                 # 对于0.5秒间隔，设置超时为1秒（2倍间隔），如果超过说明有问题
                 cmd_timeout = max(1.0, self.hidumper_interval * 2)
@@ -207,6 +208,135 @@ CONFIG"'''
         elif hasattr(self, 'hidumper_data'):
             print(f"[Pmap Monitor] 监控未启动或已停止，共采集 {len(self.hidumper_data)} 个数据点")
 
+    # ==================== 公共页面操作方法 ====================
+
+    def _click_button(self, button_name):
+        """点击指定的button，使用BY.text().type("Button")的方式
+        Args:
+            button_name: button文本名称
+        Returns:
+            bool: 是否点击成功
+        """
+        try:
+            # 使用BY.text().type("Button")的方式点击button
+            self.driver.touch(BY.text(button_name).type("Button"))
+            return True
+        except:
+            try:
+                # 如果失败，尝试只使用text查找
+                button_element = self.driver.find_element(By.text(button_name))
+                button_element.click()
+                return True
+            except:
+                try:
+                    # 如果By不存在，尝试直接通过文本查找
+                    button_element = self.driver.find_element_by_text(button_name)
+                    button_element.click()
+                    return True
+                except:
+                    try:
+                        # 如果都失败，使用CONTAINS模糊匹配，不限制类型
+                        self.driver.touch(BY.text(button_name, MatchType.CONTAINS))
+                        return True
+                    except:
+                        return False
+
+    def _slide_page(self, swipe_count, start_y_ratio=0.7, end_y_ratio=0.2, sleep_interval=0.3, slide_time=0.3, memdump_remaining=None):
+        """通用页面滑动方法
+        Args:
+            swipe_count: 滑动次数
+            start_y_ratio: 起始Y坐标比例（0-1），默认0.7
+            end_y_ratio: 结束Y坐标比例（0-1），默认0.2
+            sleep_interval: 每次滑动后等待时间（秒），默认0.3
+            slide_time: 单次滑动持续时间（秒），默认0.3
+            memdump_remaining: 当剩余次数等于此值时触发gc dump，None表示不触发
+        """
+        window_size = self.driver.get_window_size()
+        width = window_size[0]  # tuple的第一个元素是width
+        height = window_size[1]  # tuple的第二个元素是height
+        start_x = int(width * 0.5)
+        start_y = int(height * start_y_ratio)
+        end_x = int(width * 0.5)
+        end_y = int(height * end_y_ratio)
+
+        for i in range(swipe_count):
+            remaining = swipe_count - i - 1  # 剩余次数
+
+            # 当开关开启且剩余次数匹配时，触发gc dump
+            if memdump_remaining is not None and self.enable_memdump and remaining == memdump_remaining:
+                Step('执行hdc shell命令触发gc dump')
+                command1 = f'hdc shell \'echo "1" > /data/app/el2/100/base/{self.package_name}/files/control.log\''
+                subprocess.run(command1, shell=True)
+                time.sleep(1)
+
+            # 执行滑动
+            self.driver.slide((start_x, start_y), (end_x, end_y), slide_time=slide_time)
+            time.sleep(sleep_interval)
+
+    def _tab_switch(self, switch_count=1, forward_sleep=1.3, backward_sleep=0.8, fail_sleep=0.5, memdump_remaining=None):
+        """首页button来回切换
+        Args:
+            switch_count: 来回切换次数（来回算一次），默认3次
+            forward_sleep: 顺序点击成功时每次间隔（秒），默认0.8
+            backward_sleep: 逆序点击成功时每次间隔（秒），默认0.8
+            fail_sleep: 点击失败时等待时间（秒），默认0.5
+            memdump_remaining: 当剩余次数等于此值时触发gc dump，None表示不触发
+        """
+        for i in range(switch_count):
+            remaining = switch_count - i - 1  # 剩余次数
+
+            # 当开关开启且剩余次数匹配时，触发gc dump
+            if memdump_remaining is not None and self.enable_memdump and remaining == memdump_remaining:
+                Step('执行hdc shell命令触发gc dump')
+                command1 = f'hdc shell \'echo "1" > /data/app/el2/100/base/{self.package_name}/files/control.log\''
+                subprocess.run(command1, shell=True)
+                time.sleep(1)
+
+            # 顺序点击button
+            for button_name in self.button_list:
+                if self._click_button(button_name):
+                    time.sleep(forward_sleep)
+                else:
+                    time.sleep(fail_sleep)
+
+            # 逆序点击button
+            for button_name in reversed(self.button_list):
+                if self._click_button(button_name):
+                    time.sleep(backward_sleep)
+                else:
+                    time.sleep(fail_sleep)
+
+    def _click_first_video(self, position=(334, 1450)):
+        """点击首页第一个视频
+        Args:
+            position: 视频位置坐标，默认(334, 1450)
+        """
+        self._click_button("电视剧")
+        time.sleep(1)  # 等待视频加载
+        self.driver.touch(position)
+        time.sleep(1)  # 等待视频加载
+
+    def _switch_to_comment(self, fallback_position=(300, 930)):
+        """切换到评论/讨论区
+        Args:
+            fallback_position: 如果找不到讨论按钮时的备用坐标，默认(300, 930)
+        """
+        try:
+            # 尝试通过文本查找讨论按钮（Text类型）
+            comment_element = self.driver.find_element(By.text("讨论"))
+            comment_element.click()
+        except:
+            try:
+                # 如果By不存在，尝试直接通过文本查找
+                comment_element = self.driver.find_element_by_text("讨论")
+                comment_element.click()
+            except:
+                # 如果都失败，使用driver执行坐标点击
+                self.driver.touch(fallback_position)
+        time.sleep(1)
+
+    # ==================== 内部工具方法 ====================
+
     def _force_stop_app(self):
         """强制退出应用，避免后台进程残留"""
         try:
@@ -232,9 +362,9 @@ CONFIG"'''
         Step('2.强制退出腾讯视频应用（避免后台进程残留）')
         self._force_stop_app()
         
-        # # 启动pmap监控，确保在应用启动时就开始采集
-        # Step('2.1.启动pmap内存监控')
-        # self._start_hidumper_monitor()
+        # 启动pmap监控，确保在应用启动时就开始采集
+        Step('2.1.启动pmap内存监控')
+        self._start_hidumper_monitor()
         
         Step('2.2.启动腾讯视频应用')
         self.driver.start_app(package_name=self.package_name)

@@ -12,7 +12,6 @@
 """
 
 import time
-import subprocess
 from devicetest.core.test_case import Step
 from hypium import *
 from TencentVideoBase import TencentVideoBase
@@ -35,29 +34,7 @@ class TencentVideoHome(TencentVideoBase):
         self._start_app_with_monitor_and_skip_ad()
 
         Step('4.首页上划，每秒上划一次')
-        window_size = self.driver.get_window_size()
-        width = window_size[0]  # tuple的第一个元素是width
-        height = window_size[1]  # tuple的第二个元素是height
-        start_x = int(width * 0.5)
-        start_y = int(height * 0.7)
-        end_x = int(width * 0.5)
-        end_y = int(height * 0.2)
-        
-        # 上划指定次数，每次间隔1秒，使用slide方法进行精准滑动
-        for i in range(self.swipe_count):
-            remaining = self.swipe_count - i - 1  # 剩余次数
-            
-            # 当开关开启且剩余5次时，触发gc dump
-            if self.enable_memdump and remaining == 10:
-                Step('5.执行hdc shell命令触发gc dump')
-                # 执行hdc shell命令写入control.log
-                command1 = 'hdc shell \'echo "1" > /data/app/el2/100/base/com.tencent.videohm/files/control.log\''
-                subprocess.run(command1, shell=True)
-                time.sleep(1)
-            
-            # 执行滑动
-            self.driver.slide((start_x, start_y), (end_x, end_y), slide_time=0.3)
-            time.sleep(0.3)
+        self._slide_page(self.swipe_count, end_y_ratio=0.2, sleep_interval=0.3, memdump_remaining=10)
 
     def teardown(self):
         """调用父类的teardown方法"""

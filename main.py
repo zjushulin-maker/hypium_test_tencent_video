@@ -234,6 +234,10 @@ if __name__ == "__main__":
     else:
         cases = all_cases
 
+    # 每次运行追加时间戳子目录，避免 xdevice "report path must be empty" 报错
+    run_ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = str(Path(report_path) / run_ts)
+
     print(f"{_C}发现用例（共 {len(cases)} 个）：{cases}")
     print(f"压测轮数：{'∞' if repeat == 0 else repeat}")
     print(f"设备 SN ：{device_sn or '（使用当前连接设备）'}")
