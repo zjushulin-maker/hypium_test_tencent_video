@@ -273,14 +273,66 @@ CONFIG"'''
             self.driver.slide((start_x, start_y), (end_x, end_y), slide_time=slide_time)
             time.sleep(sleep_interval)
 
+    # 首页 tab 栏正/反向切换坐标序列
+    # 由于腾讯视频首页 tab 用 Kotlin Compose 自绘，不在 a11y 控件树里，
+    # 无法用文字查找；以下为实测整理的点击坐标序列（含 tab 栏自动横向滚动后的位置）。
+    TAB_SWITCH_FORWARD_POINTS = [
+        (293, 362), (565, 362), (741, 362), (782, 362), (762, 362),
+        (782, 362), (808, 362), (849, 362), (826, 362), (801, 362),
+        (776, 362), (826, 362), (1026, 362),
+    ]
+    TAB_SWITCH_BACKWARD_POINTS = [
+        (740, 362), (528, 362), (382, 362), (409, 362), (375, 362),
+        (361, 362), (390, 362), (369, 362), (381, 362), (412, 362),
+        (353, 362), (309, 362), (98, 362),
+    ]
+
     def _tab_switch(self, switch_count=1, forward_sleep=1.3, backward_sleep=0.8, fail_sleep=0.5, memdump_remaining=None):
-        """首页button来回切换
+        """首页 tab 栏来回切换（坐标点击实现）
+
+        说明：腾讯视频首页 tab 用 Kotlin Compose 自绘，不暴露给 ArkUI 控件树，
+        无法通过文字定位，因此改为按实测坐标依次点击。
+
         Args:
-            switch_count: 来回切换次数（来回算一次），默认3次
-            forward_sleep: 顺序点击成功时每次间隔（秒），默认0.8
+            switch_count: 来回切换次数（来回算一次），默认1次
+            forward_sleep: 顺序点击每次间隔（秒），默认1.3
+            backward_sleep: 逆序点击每次间隔（秒），默认0.8
+            fail_sleep: 兼容保留，坐标点击不会失败，本参数不再使用
+            memdump_remaining: 当剩余次数等于此值时触发 gc dump，None 表示不触发
+        """
+        for i in range(switch_count):
+            remaining = switch_count - i - 1  # 剩余次数
+
+            # 当开关开启且剩余次数匹配时，触发gc dump
+            if memdump_remaining is not None and self.enable_memdump and remaining == memdump_remaining:
+                Step('执行hdc shell命令触发gc dump')
+                command1 = f'hdc shell \'echo "1" > /data/app/el2/100/base/{self.package_name}/files/control.log\''
+                subprocess.run(command1, shell=True)
+                time.sleep(1)
+
+            # 顺序按坐标点击 tab
+            for point in self.TAB_SWITCH_FORWARD_POINTS:
+                self.driver.touch(point)
+                time.sleep(forward_sleep)
+
+            # 逆序按坐标点击 tab
+            for point in self.TAB_SWITCH_BACKWARD_POINTS:
+                self.driver.touch(point)
+                time.sleep(backward_sleep)
+
+    def _tab_switch_by_text(self, switch_count=1, forward_sleep=1.3, backward_sleep=0.8, fail_sleep=0.5, memdump_remaining=None):
+        """首页 tab 栏来回切换（文字查找实现，备用版）
+
+        ⚠️ 已知失效：腾讯视频 9.x 起首页用 Kotlin Compose 自绘，文字不在 a11y 控件树里，
+        本方法的 _click_button 永远返回 False。仅作为接口备份保留，
+        请使用基于坐标的 _tab_switch。
+
+        Args:
+            switch_count: 来回切换次数（来回算一次），默认1次
+            forward_sleep: 顺序点击成功时每次间隔（秒），默认1.3
             backward_sleep: 逆序点击成功时每次间隔（秒），默认0.8
             fail_sleep: 点击失败时等待时间（秒），默认0.5
-            memdump_remaining: 当剩余次数等于此值时触发gc dump，None表示不触发
+            memdump_remaining: 当剩余次数等于此值时触发 gc dump，None 表示不触发
         """
         for i in range(switch_count):
             remaining = switch_count - i - 1  # 剩余次数
@@ -311,28 +363,34 @@ CONFIG"'''
         Args:
             position: 视频位置坐标，默认(334, 1450)
         """
-        self._click_button("电视剧")
+        # self._click_button("电视剧")
         time.sleep(1)  # 等待视频加载
+        self.driver.touch((540,362))
+        time.sleep(2)  # 等待视频加载
         self.driver.touch(position)
-        time.sleep(1)  # 等待视频加载
+        time.sleep(2)  # 等待视频加载
 
     def _switch_to_comment(self, fallback_position=(300, 930)):
         """切换到评论/讨论区
         Args:
             fallback_position: 如果找不到讨论按钮时的备用坐标，默认(300, 930)
         """
-        try:
-            # 尝试通过文本查找讨论按钮（Text类型）
-            comment_element = self.driver.find_element(By.text("讨论"))
-            comment_element.click()
-        except:
-            try:
-                # 如果By不存在，尝试直接通过文本查找
-                comment_element = self.driver.find_element_by_text("讨论")
-                comment_element.click()
-            except:
-                # 如果都失败，使用driver执行坐标点击
-                self.driver.touch(fallback_position)
+        # try:
+        #     # 尝试通过文本查找讨论按钮（Text类型）
+        #     comment_element = self.driver.find_element(By.text("讨论"))
+        #     comment_element.click()
+        # except:
+        #     try:
+        #         # 如果By不存在，尝试直接通过文本查找
+        #         comment_element = self.driver.find_element_by_text("讨论")
+        #         comment_element.click()
+        #     except:
+        #         # 如果都失败，使用driver执行坐标点击
+        #         self.driver.touch(fallback_position)
+        self.driver.touch((300,930))
+        time.sleep(1)
+        # 点击最新
+        self.driver.touch((514,1110))
         time.sleep(1)
 
     # ==================== 内部工具方法 ====================
